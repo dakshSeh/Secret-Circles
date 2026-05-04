@@ -1,0 +1,512 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap');
+
+@import "tailwindcss";
+
+/* ============================================================
+   THEOREM — Design System
+   Neo-academic minimalism: Oxford library meets futuristic lab
+   ============================================================ */
+
+:root {
+  /* Colors */
+  --bg:           #0a0a0a;
+  --surface:      #111111;
+  --surface-2:    #161616;
+  --surface-3:    #1c1c1c;
+  --border:       #232323;
+  --border-2:     #2a2a2a;
+  --text:         #e2e2e2;
+  --text-muted:   #6a6a6a;
+  --text-dim:     #3a3a3a;
+  --ember:        #e8681a;
+  --ember-dim:    #a04a12;
+  --ember-glow:   #ff9551;
+  --ember-subtle: rgba(232, 104, 26, 0.08);
+  --ember-border: rgba(232, 104, 26, 0.2);
+  --steel:        #3a3a3a;
+  --success:      #22c55e;
+  --error:        #ef4444;
+  --warning:      #f59e0b;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', monospace;
+
+  /* Spacing */
+  --radius-sm:  6px;
+  --radius:     10px;
+  --radius-lg:  16px;
+  --radius-xl:  24px;
+
+  /* Shadows */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
+  --shadow:     0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.6);
+  --glow-ember: 0 0 24px rgba(232, 104, 26, 0.3);
+  --glow-sm:    0 0 12px rgba(232, 104, 26, 0.2);
+}
+
+/* ============================================================
+   BASE RESET
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+h1 { font-size: clamp(2rem, 5vw, 4rem); }
+h2 { font-size: clamp(1.5rem, 3vw, 2.5rem); }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1.1rem; }
+
+p { color: var(--text-muted); line-height: 1.7; }
+
+a { color: var(--ember); text-decoration: none; transition: color 0.2s; }
+a:hover { color: var(--ember-glow); }
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--steel); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ember-dim); }
+
+/* ============================================================
+   UTILITY CLASSES
+   ============================================================ */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.section { padding: 6rem 0; }
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.card:hover { border-color: var(--border-2); box-shadow: var(--shadow); }
+.card-ember:hover { border-color: var(--ember-border); box-shadow: var(--glow-sm); }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: var(--radius);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--ember);
+  color: #fff;
+  padding: 0.65rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(232,104,26,0.3);
+}
+.btn-primary:hover {
+  background: var(--ember-glow);
+  box-shadow: var(--glow-ember);
+  transform: translateY(-1px);
+  color: #fff;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0.65rem 1.25rem;
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover {
+  color: var(--text);
+  border-color: var(--border-2);
+  background: var(--surface-2);
+}
+
+.btn-outline-ember {
+  background: transparent;
+  color: var(--ember);
+  padding: 0.65rem 1.5rem;
+  border: 1px solid var(--ember-border);
+}
+.btn-outline-ember:hover {
+  background: var(--ember-subtle);
+  border-color: var(--ember);
+  box-shadow: var(--glow-sm);
+}
+
+.btn-sm { padding: 0.4rem 0.9rem; font-size: 0.8rem; }
+.btn-lg { padding: 0.85rem 2rem; font-size: 1rem; }
+.btn-icon { padding: 0.5rem; width: 2.25rem; height: 2.25rem; justify-content: center; border-radius: var(--radius-sm); }
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.65rem;
+  border-radius: 100px;
+}
+.badge-easy    { background: rgba(34,197,94,0.12);  color: #4ade80; border: 1px solid rgba(34,197,94,0.2); }
+.badge-moderate{ background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.2); }
+.badge-hard    { background: rgba(239,68,68,0.12);  color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+.badge-ember   { background: var(--ember-subtle);   color: var(--ember); border: 1px solid var(--ember-border); }
+
+/* Inputs */
+.input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.65rem 1rem;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+.input:focus { border-color: var(--ember); box-shadow: 0 0 0 3px rgba(232,104,26,0.1); }
+.input::placeholder { color: var(--text-dim); }
+
+/* Divider */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5rem 0;
+}
+
+/* Tag */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ============================================================
+   FORGE GLOW ANIMATION
+   ============================================================ */
+@keyframes ember-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(232,104,26,0.2); }
+  50%       { box-shadow: 0 0 40px rgba(232,104,26,0.45); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+
+@keyframes heat-up {
+  0%   { width: 0%; background: var(--ember-dim); }
+  60%  { background: var(--ember); }
+  100% { width: 100%; background: var(--ember-glow); }
+}
+
+@keyframes slide-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-slide-up   { animation: slide-in-up 0.4s ease both; }
+.animate-slide-right{ animation: slide-in-right 0.4s ease both; }
+.animate-fade-in    { animation: fade-in 0.4s ease both; }
+.animate-float      { animation: float 3s ease-in-out infinite; }
+.animate-ember-pulse{ animation: ember-pulse 2s ease-in-out infinite; }
+
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+
+/* Shimmer skeleton */
+.shimmer {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ============================================================
+   SIDEBAR LAYOUT
+   ============================================================ */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  z-index: 50;
+  transition: transform 0.3s;
+}
+
+.main-content {
+  margin-left: 240px;
+  flex: 1;
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main-content { margin-left: 0; }
+}
+
+/* ============================================================
+   QUESTION CARD
+   ============================================================ */
+.question-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.question-card:hover { border-color: var(--border-2); }
+
+.question-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.question-number {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ember);
+  background: var(--ember-subtle);
+  border: 1px solid var(--ember-border);
+  border-radius: var(--radius-sm);
+  padding: 0.2rem 0.5rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+/* ============================================================
+   UPLOAD ZONE
+   ============================================================ */
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-xl);
+  padding: 4rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: var(--surface);
+  position: relative;
+  overflow: hidden;
+}
+.upload-zone:hover,
+.upload-zone.dragover {
+  border-color: var(--ember);
+  background: var(--surface-2);
+  box-shadow: var(--glow-ember), inset 0 0 40px rgba(232,104,26,0.04);
+}
+.upload-zone.processing {
+  border-color: var(--ember-dim);
+  animation: ember-pulse 1.5s ease-in-out infinite;
+}
+
+/* ============================================================
+   PROGRESS BAR
+   ============================================================ */
+.progress-bar {
+  height: 3px;
+  background: var(--surface-3);
+  border-radius: 100px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 100px;
+  background: linear-gradient(90deg, var(--ember-dim), var(--ember), var(--ember-glow));
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================
+   LANDING HERO GRADIENT
+   ============================================================ */
+.hero-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232,104,26,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* ============================================================
+   CHART TOOLTIPS
+   ============================================================ */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: var(--surface-2) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  color: var(--text) !important;
+}
+
+/* ============================================================
+   SLIDER
+   ============================================================ */
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--surface-3);
+  border-radius: 100px;
+  outline: none;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--ember);
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 8px rgba(232,104,26,0.4);
+  transition: transform 0.2s;
+}
+input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+/* ============================================================
+   SELECT
+   ============================================================ */
+select {
+  appearance: none;
+  background: var(--surface-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236a6a6a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 0.75rem center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  padding: 0.65rem 2.5rem 0.65rem 1rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+select:focus { border-color: var(--ember); box-shadow: 0 0 0 3px rgba(232,104,26,0.1); }
+
+/* ============================================================
+   ACCORDION (FAQ)
+   ============================================================ */
+.accordion-item {
+  border-bottom: 1px solid var(--border);
+}
+.accordion-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 0;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-sans);
+}
+.accordion-content {
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+/* ============================================================
+   AUTH PAGES
+   ============================================================ */
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: var(--shadow-lg);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 640px) {
+  .section { padding: 4rem 0; }
+  .card { padding: 1.25rem; }
+}
