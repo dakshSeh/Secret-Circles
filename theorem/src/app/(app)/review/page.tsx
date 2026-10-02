@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, Cell,
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
 import { createClient } from '@/lib/supabase/client';
 import type { QuizSession, QuizSet } from '@/lib/types';
@@ -56,16 +57,35 @@ export default function ReviewPage() {
   }));
 
   // Subject performance (by quiz set subject)
-  const subjectMap: Record<string, { total: number; correct: number }> = {};
+  const subjectMap: Record<string, { count: number; totalAccuracy: number }> = {};
   sessions.forEach(s => {
+    if (s.accuracy === null) return;
     const subject = s.quiz_sets?.subject || 'Unknown';
-    if (!subjectMap[subject]) subjectMap[subject] = { total: 0, correct: 0 };
-    subjectMap[subject].total += 1;
-    if ((s.accuracy || 0) > 70) subjectMap[subject].correct += 1;
+    if (!subjectMap[subject]) subjectMap[subject] = { count: 0, totalAccuracy: 0 };
+    subjectMap[subject].count += 1;
+    subjectMap[subject].totalAccuracy += s.accuracy;
   });
-  const subjectData = Object.entries(subjectMap).map(([subject, { total, correct }]) => ({
-    subject, accuracy: total > 0 ? Math.round((correct / total) * 100) : 0, sessions: total,
+  const subjectData = Object.entries(subjectMap).map(([subject, { count, totalAccuracy }]) => ({
+    subject, accuracy: count > 0 ? Math.round(totalAccuracy / count) : 0, sessions: count,
   })).sort((a, b) => b.accuracy - a.accuracy);
+
+  // Composite Cognitive Skills Data
+  const skillsSessions = sessions.filter(s => s.skill_recall !== null && s.skill_recall !== undefined);
+  const avgSkills = { recall: 0, comprehension: 0, application: 0, analysis: 0, evaluation: 0 };
+  if (skillsSessions.length > 0) {
+    avgSkills.recall = Math.round(skillsSessions.reduce((s, ss) => s + (ss.skill_recall || 0), 0) / skillsSessions.length);
+    avgSkills.comprehension = Math.round(skillsSessions.reduce((s, ss) => s + (ss.skill_comprehension || 0), 0) / skillsSessions.length);
+    avgSkills.application = Math.round(skillsSessions.reduce((s, ss) => s + (ss.skill_application || 0), 0) / skillsSessions.length);
+    avgSkills.analysis = Math.round(skillsSessions.reduce((s, ss) => s + (ss.skill_analysis || 0), 0) / skillsSessions.length);
+    avgSkills.evaluation = Math.round(skillsSessions.reduce((s, ss) => s + (ss.skill_evaluation || 0), 0) / skillsSessions.length);
+  }
+  const radarData = [
+    { subject: 'Recall', A: avgSkills.recall, fullMark: 100 },
+    { subject: 'Comprehension', A: avgSkills.comprehension, fullMark: 100 },
+    { subject: 'Application', A: avgSkills.application, fullMark: 100 },
+    { subject: 'Analysis', A: avgSkills.analysis, fullMark: 100 },
+    { subject: 'Evaluation', A: avgSkills.evaluation, fullMark: 100 },
+  ];
 
   const COLORS = ['var(--ember)', '#ff9551', '#b34d0f', '#6b6b6b'];
 
@@ -110,12 +130,13 @@ export default function ReviewPage() {
           <Link href="/generate" className="btn btn-primary">Start practising</Link>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Accuracy trend */}
-          {chartData.length > 1 && (
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="card" style={{ gridColumn: '1 / -1' }}>
+          {chartData.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="card md:col-span-2" style={{ minWidth: 0, overflow: 'hidden' }}>
               <h3 style={{ fontSize: '0.9rem', marginBottom: '1.25rem' }}>Accuracy Trend</h3>
-              <ResponsiveContainer width="100%" height={200}>
+              <div style={{ width: '100%', minHeight: 200 }}>
+                <ResponsiveContainer width="100%" height={200}>
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis dataKey="name" stroke="var(--text-muted)" tick={{ fontSize: 11 }} />
@@ -127,19 +148,21 @@ export default function ReviewPage() {
                   <Line type="monotone" dataKey="accuracy" stroke="var(--ember)" strokeWidth={2} dot={{ fill: 'var(--ember)', r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
+              </div>
             </motion.div>
           )}
 
           {/* Subject performance */}
           {subjectData.length > 0 && (
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="card">
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="card" style={{ minWidth: 0, overflow: 'hidden' }}>
               <h3 style={{ fontSize: '0.9rem', marginBottom: '1.25rem' }}>Subject Performance</h3>
-              <ResponsiveContainer width="100%" height={180}>
+              <div style={{ width: '100%', minHeight: 180 }}>
+                <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={subjectData} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                   <XAxis type="number" domain={[0, 100]} stroke="var(--text-muted)" tick={{ fontSize: 10 }} unit="%" />
                   <YAxis dataKey="subject" type="category" stroke="var(--text-muted)" tick={{ fontSize: 10 }} width={80} />
-                  <Tooltip contentStyle={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: 'var(--text)', fontSize: 12 }} formatter={(v) => [`${v}%`, 'High-score rate']} />
+                  <Tooltip contentStyle={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', color: 'var(--text)', fontSize: 12 }} formatter={(v) => [`${v}%`, 'Avg Accuracy']} />
                   <Bar dataKey="accuracy" radius={[0, 4, 4, 0]}>
                     {subjectData.map((_, index) => (
                       <Cell key={index} fill={COLORS[index % COLORS.length]} />
@@ -147,15 +170,33 @@ export default function ReviewPage() {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Cognitive Skills Radar Chart */}
+          {skillsSessions.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="card" style={{ minWidth: 0, overflow: 'hidden' }}>
+              <h3 style={{ fontSize: '0.9rem', marginBottom: '1.25rem' }}>Composite Cognitive Profile</h3>
+              <div style={{ width: '100%', minHeight: 180 }}>
+                <ResponsiveContainer width="100%" height={180}>
+                  <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
+                    <PolarGrid stroke="var(--border)" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: 'var(--text-dim)', fontSize: 10 }} />
+                    <Radar name="Skills" dataKey="A" stroke="var(--ember)" fill="var(--ember)" fillOpacity={0.25} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
             </motion.div>
           )}
 
           {/* Recent sessions table */}
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="card" style={{ gridColumn: subjectData.length > 0 ? '2' : '1 / -1' }}>
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="card md:col-span-2">
             <h3 style={{ fontSize: '0.9rem', marginBottom: '1.25rem' }}>Session History</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {sessions.slice(0, 8).map(s => (
-                <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', background: 'var(--surface-2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+                <Link href={`/review/${s.id}`} key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', background: 'var(--surface-2)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', textDecoration: 'none', color: 'inherit' }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: (s.accuracy || 0) >= 70 ? 'var(--success)' : (s.accuracy || 0) >= 40 ? 'var(--warning)' : 'var(--error)', flexShrink: 0 }} />
                   <div style={{ flex: 1, overflow: 'hidden' }}>
                     <div style={{ fontSize: '0.82rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -167,7 +208,7 @@ export default function ReviewPage() {
                     <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--ember)' }}>{s.accuracy ? `${Math.round(s.accuracy)}%` : '—'}</div>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{formatTime(s.duration_secs || 0)}</div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </motion.div>

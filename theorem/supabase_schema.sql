@@ -19,10 +19,12 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile"
   ON public.profiles FOR SELECT
   USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE
   USING (auth.uid() = id);
@@ -65,6 +67,7 @@ CREATE TABLE IF NOT EXISTS public.uploads (
 
 ALTER TABLE public.uploads ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users manage own uploads" ON public.uploads;
 CREATE POLICY "Users manage own uploads"
   ON public.uploads FOR ALL
   USING (auth.uid() = user_id);
@@ -82,6 +85,7 @@ CREATE TABLE IF NOT EXISTS public.folders (
 
 ALTER TABLE public.folders ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users manage own folders" ON public.folders;
 CREATE POLICY "Users manage own folders"
   ON public.folders FOR ALL
   USING (auth.uid() = user_id);
@@ -104,6 +108,7 @@ CREATE TABLE IF NOT EXISTS public.quiz_sets (
 
 ALTER TABLE public.quiz_sets ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users manage own quiz sets" ON public.quiz_sets;
 CREATE POLICY "Users manage own quiz sets"
   ON public.quiz_sets FOR ALL
   USING (auth.uid() = user_id);
@@ -132,6 +137,7 @@ CREATE TABLE IF NOT EXISTS public.questions (
 
 ALTER TABLE public.questions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users manage own questions" ON public.questions;
 CREATE POLICY "Users manage own questions"
   ON public.questions FOR ALL
   USING (auth.uid() = user_id);
@@ -154,6 +160,7 @@ CREATE TABLE IF NOT EXISTS public.quiz_sessions (
 
 ALTER TABLE public.quiz_sessions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users manage own sessions" ON public.quiz_sessions;
 CREATE POLICY "Users manage own sessions"
   ON public.quiz_sessions FOR ALL
   USING (auth.uid() = user_id);
@@ -169,17 +176,41 @@ CREATE TABLE IF NOT EXISTS public.session_answers (
   user_answer     TEXT,
   is_correct      BOOLEAN,
   time_taken_secs INTEGER,
+  ai_feedback     TEXT,
+  marks_awarded   NUMERIC(5,2),
   created_at      TIMESTAMPTZ DEFAULT now()
 );
 
 ALTER TABLE public.session_answers ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users manage own answers" ON public.session_answers;
 CREATE POLICY "Users manage own answers"
   ON public.session_answers FOR ALL
   USING (auth.uid() = user_id);
 
 -- ============================================================
--- 8. INDEXES
+-- 8. SITE FEEDBACK
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.site_feedback (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id         UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  role            TEXT CHECK (role IN ('student', 'teacher', 'other')),
+  rating          INTEGER CHECK (rating >= 1 AND rating <= 5),
+  message         TEXT NOT NULL,
+  created_at      TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.site_feedback ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can insert feedback" ON public.site_feedback;
+CREATE POLICY "Anyone can insert feedback"
+  ON public.site_feedback FOR INSERT
+  WITH CHECK (true);
+
+-- No select policy needed because we will query using a service role key in the admin route.
+
+-- ============================================================
+-- 9. INDEXES
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_uploads_user        ON public.uploads(user_id);
 CREATE INDEX IF NOT EXISTS idx_quiz_sets_user      ON public.quiz_sets(user_id);
@@ -188,13 +219,13 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user       ON public.quiz_sessions(user_
 CREATE INDEX IF NOT EXISTS idx_answers_session     ON public.session_answers(session_id);
 
 -- ============================================================
--- 9. CACHE RELOAD
+-- 10. CACHE RELOAD
 -- ============================================================
 -- This is critical to ensure the API recognizes the new tables immediately
 NOTIFY pgrst, 'reload schema';
 
 -- ============================================================
--- 10. STORAGE BUCKET POLICIES
+-- 11. STORAGE BUCKET POLICIES
 -- ============================================================
 -- Note: You must first create a Private bucket named "uploads" in the dashboard
 -- Then these policies will secure it.

@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookMarked, Folder, Plus, Play, Trash2, Search, FolderPlus, X } from 'lucide-react';
+import { BookMarked, Folder, Plus, Play, Trash2, Search, FolderPlus, X, Crosshair } from 'lucide-react';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import type { QuizSet, Folder as FolderType } from '@/lib/types';
@@ -69,7 +70,7 @@ export default function SavedPage() {
         </div>
       </motion.div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: '1.5rem', alignItems: 'start' }}>
+      <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6 items-start">
         {/* Folder sidebar */}
         <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="card" style={{ padding: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
@@ -102,7 +103,7 @@ export default function SavedPage() {
           </div>
           {loading ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
-              {[1,2,3,4].map(i => <div key={i} className="shimmer" style={{ height: 140, borderRadius: 'var(--radius-lg)' }} />)}
+              {[1,2,3,4].map(i => <SkeletonCard key={i} />)}
             </div>
           ) : filtered.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
@@ -114,11 +115,13 @@ export default function SavedPage() {
           ) : (
             <motion.div layout style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
               <AnimatePresence>
-                {filtered.map((qs, i) => (
+                {filtered.map((qs, i) => {
+                  const isTargeted = qs.title.startsWith('Targeted Practice:');
+                  return (
                   <motion.div key={qs.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ delay: i * 0.04 }} className="card card-ember" style={{ display: 'flex', flexDirection: 'column' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                        <BookMarked size={15} color="var(--ember)" />
+                        {isTargeted ? <Crosshair size={15} color="var(--ember)" /> : <BookMarked size={15} color="var(--ember)" />}
                         <button className="btn btn-icon btn-ghost" style={{ padding: '0.25rem', color: 'var(--text-dim)' }} onClick={() => deleteQuizSet(qs.id)}><Trash2 size={13} /></button>
                       </div>
                       <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.35rem', lineHeight: 1.3 }}>{qs.title}</h3>
@@ -133,7 +136,8 @@ export default function SavedPage() {
                       <Link href={`/practice/${qs.id}`} className="btn btn-ghost btn-sm" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}><Play size={11} /> Practice</Link>
                     </div>
                   </motion.div>
-                ))}
+                  );
+                })}
               </AnimatePresence>
             </motion.div>
           )}

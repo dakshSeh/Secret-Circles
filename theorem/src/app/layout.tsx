@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "Theorem — Where Learning is Forged Through Practice",
@@ -12,6 +13,9 @@ export const metadata: Metadata = {
     description: "AI-powered CBSE assessment platform. Upload notes, get exam-ready questions instantly.",
     type: "website",
   },
+  verification: {
+    google: "G5j582XOUR51v3SbzcpgQj-wTgt31WFe7YVXmgbo3Tg",
+  },
 };
 
 export default function RootLayout({
@@ -20,16 +24,30 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-          rel="stylesheet"
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-8R0K6H6KDL"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-8R0K6H6KDL');
+            `,
+          }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

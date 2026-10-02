@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, Cpu, Zap, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { Upload, FileText, Cpu, CheckCircle, AlertCircle, X } from 'lucide-react';
 
 type ForgeState = 'idle' | 'uploading' | 'parsing' | 'analyzing' | 'done' | 'error';
 

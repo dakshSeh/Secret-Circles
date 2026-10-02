@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Play, BookOpen, Clock, X } from 'lucide-react';
+import { ArrowLeft, Play, Clock, X } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import QuizRunner, { type SessionResult } from '@/components/quiz/QuizRunner';
@@ -18,6 +18,35 @@ export default function PracticePage() {
   const [loading, setLoading] = useState(true);
   const [quizMode, setQuizMode] = useState<QuizMode | null>(null);
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [completedSessionId, setCompletedSessionId] = useState<string | null>(null);
+  const [cognitiveScores, setCognitiveScores] = useState<{ recall: number, comprehension: number, application: number, analysis: number, evaluation: number } | null>(null);
+
+  // Poll for cognitive scores once a session completes
+  useEffect(() => {
+    if (!completedSessionId || cognitiveScores) return;
+    
+    const interval = setInterval(async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('quiz_sessions')
+        .select('skill_recall, skill_comprehension, skill_application, skill_analysis, skill_evaluation')
+        .eq('id', completedSessionId)
+        .single();
+        
+      if (data && data.skill_recall !== null) {
+        setCognitiveScores({
+          recall: data.skill_recall,
+          comprehension: data.skill_comprehension,
+          application: data.skill_application,
+          analysis: data.skill_analysis,
+          evaluation: data.skill_evaluation
+        });
+        clearInterval(interval);
+      }
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, [completedSessionId, cognitiveScores]);
 
   useEffect(() => {
     async function load() {
@@ -52,15 +81,24 @@ export default function PracticePage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const correct = results.filter(r => r.isCorrect).length;
-    const accuracy = results.length > 0 ? (correct / results.length) * 100 : 0;
+    const totalPossibleMarks = questions.reduce((sum, q) => sum + (q.marks || 1), 0);
+    const totalAwardedMarks = results.reduce((sum, r) => {
+      if (r.marksAwarded !== undefined && r.marksAwarded !== null) return sum + r.marksAwarded;
+      if (r.isCorrect) {
+        const q = questions.find(q => q.id === r.questionId);
+        return sum + (q?.marks || 1);
+      }
+      return sum;
+    }, 0);
+
+    const accuracy = totalPossibleMarks > 0 ? (totalAwardedMarks / totalPossibleMarks) * 100 : 0;
     const duration = results.reduce((s, r) => s + r.timeTakenSecs, 0);
 
     const { data: session } = await supabase.from('quiz_sessions').insert({
       user_id: user.id,
       quiz_set_id: quizSet.id,
       mode: quizMode,
-      score: correct,
+      score: totalAwardedMarks,
       accuracy,
       duration_secs: duration,
       completed: true,
@@ -75,8 +113,41 @@ export default function PracticePage() {
         user_answer: r.userAnswer,
         is_correct: r.isCorrect,
         time_taken_secs: r.timeTakenSecs,
+        ai_feedback: r.aiFeedback,
+        marks_awarded: r.marksAwarded,
       }));
       await supabase.from('session_answers').insert(answers);
+      setCompletedSessionId(session.id);
+
+      // Trigger AI Cognitive Skills Analysis in the background
+      fetch('/api/evaluate-skills', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id })
+      }).catch(console.error);
+    }
+  };
+
+  const handleGenerateTargeted = async () => {
+    if (!completedSessionId || !quizSet) return;
+    try {
+      const res = await fetch('/api/practice/targeted', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: completedSessionId,
+          quizSetId: quizSet.id
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to generate targeted practice');
+      
+      if (data.quizSetId) {
+        router.push(`/practice/${data.quizSetId}`);
+      }
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Something went wrong');
+      throw err;
     }
   };
 
@@ -99,9 +170,11 @@ export default function PracticePage() {
 
   return (
     <div style={{ padding: '2rem', maxWidth: 900, margin: '0 auto' }}>
-      <Link href="/saved" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.875rem', textDecoration: 'none', marginBottom: '2rem', transition: 'color 0.2s' }}>
-        <ArrowLeft size={14} /> Back to Saved
-      </Link>
+      {!sessionStarted && (
+        <Link href="/saved" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.875rem', textDecoration: 'none', marginBottom: '2rem', transition: 'color 0.2s' }}>
+          <ArrowLeft size={14} /> Back to Saved
+        </Link>
+      )}
 
       {!sessionStarted ? (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card card-ember">
@@ -150,25 +223,76 @@ export default function PracticePage() {
           </div>
         </motion.div>
       ) : (
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-            <div>
-              <h2 style={{ fontSize: '1.1rem', marginBottom: '0.2rem' }}>{quizSet.title}</h2>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                {quizMode === 'practice' ? 'Practice Session' : 'Exam Simulation'}
-              </span>
+        quizMode === 'exam' ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#0a0a0a', zIndex: 9999, overflowY: 'auto', color: '#e5e5e5' }}
+          >
+            <div style={{
+              maxWidth: 800,
+              margin: '0 auto',
+              padding: 'clamp(1.5rem, 4vw, 4rem) clamp(1rem, 3vw, 2rem)',
+              '--text': '#F8F5F0',
+              '--text-muted': '#B3B0AA',
+              '--text-dim': '#7A7874',
+              '--surface': '#262626',
+              '--surface-2': '#2F2E2C',
+              '--surface-3': '#3D3B39',
+              '--border': '#3D3B39',
+              '--border-2': '#4A4846',
+              '--bg': '#1E1E1E',
+              '--surface-glass': 'rgba(38, 38, 38, 0.55)',
+              '--ember': '#f97316',
+              '--ember-dim': 'rgba(249, 115, 22, 0.5)',
+              '--ember-subtle': 'rgba(249, 115, 22, 0.1)',
+              '--ember-border': 'rgba(249, 115, 22, 0.2)',
+              '--ember-glow': 'rgba(249, 115, 22, 0.15)',
+              '--error': '#ef4444',
+              '--success': '#22c55e',
+            } as React.CSSProperties}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.2rem', marginBottom: '0.2rem', color: '#fff' }}>{quizSet.title}</h2>
+                  <span style={{ fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Exam Simulation — Focus Mode
+                  </span>
+                </div>
+                <button style={{ color: '#888', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={() => setSessionStarted(false)}>
+                  <X size={16} /> End Simulation
+                </button>
+              </div>
+              <QuizRunner
+                questions={questions}
+                mode={quizMode || 'exam'}
+                timeLimitMinutes={Math.max(10, questions.length * 1.5)}
+                onComplete={handleSessionComplete}
+              />
             </div>
-            <button className="btn btn-ghost btn-sm" onClick={() => setSessionStarted(false)}>
-              <X size={14} /> Exit
-            </button>
+          </motion.div>
+        ) : (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.1rem', marginBottom: '0.2rem' }}>{quizSet.title}</h2>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Practice Session
+                </span>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setSessionStarted(false)}>
+                <X size={14} /> Exit
+              </button>
+            </div>
+            <QuizRunner
+              questions={questions}
+              mode={quizMode || 'practice'}
+              timeLimitMinutes={Math.max(10, questions.length * 1.5)}
+              onComplete={handleSessionComplete}
+              onGenerateTargeted={completedSessionId ? handleGenerateTargeted : undefined}
+              cognitiveScores={cognitiveScores}
+            />
           </div>
-          <QuizRunner
-            questions={questions}
-            mode={quizMode || 'practice'}
-            timeLimitMinutes={Math.max(10, questions.length * 1.5)} // 1.5 mins per question roughly
-            onComplete={handleSessionComplete}
-          />
-        </div>
+        )
       )}
     </div>
   );

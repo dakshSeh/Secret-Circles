@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { generateQuestionsWithAI } from '@/lib/ai/openrouter';
+import { generateQuestionsWithAI } from '@/lib/ai/groq';
 import { createClient } from '@/lib/supabase/server';
 import type { GenerationOptions } from '@/lib/types';
 
@@ -10,7 +10,10 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json() as {
-      text: string;
+      mode?: 'pdf' | 'topic';
+      text?: string;
+      topic?: string;
+      classLevel?: string;
       options: GenerationOptions;
       uploadId?: string;
       title: string;
@@ -18,17 +21,31 @@ export async function POST(request: NextRequest) {
       chapter?: string;
     };
 
-    const { text, options, uploadId, title, subject, chapter } = body;
+    const { mode = 'pdf', text, topic, classLevel, options, uploadId, title, subject, chapter } = body;
 
-    if (!text || text.trim().length < 100) {
-      return NextResponse.json({ error: 'Text too short — need at least 100 characters.' }, { status: 400 });
+    if (mode === 'pdf') {
+      if (!text || text.trim().length < 100) {
+        return NextResponse.json({ error: 'Text too short — need at least 100 characters.' }, { status: 400 });
+      }
+    } else {
+      if (!topic || topic.trim().length < 3) {
+        return NextResponse.json({ error: 'Please enter a valid topic (at least 3 characters).' }, { status: 400 });
+      }
+      if (!classLevel) {
+        return NextResponse.json({ error: 'Please select a target class.' }, { status: 400 });
+      }
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
 
     // Generate with AI
-    const generatedQuestions = await generateQuestionsWithAI(text, options, apiKey);
+    const generatedQuestions = await generateQuestionsWithAI(
+      text || '',
+      options,
+      apiKey,
+      mode === 'topic' ? { topic: topic!, subject: subject || 'General', classLevel: classLevel! } : undefined
+    );
 
     // Create quiz set in DB
     const { data: quizSet, error: qsErr } = await supabase

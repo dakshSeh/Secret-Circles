@@ -1,6 +1,7 @@
 'use client';
 import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { Download, BookOpen, Play, Zap, AlertCircle, X } from 'lucide-react';
 import UploadZone from '@/components/forge/UploadZone';
 import GeneratorControls from '@/components/generator/GeneratorControls';
@@ -13,6 +14,7 @@ import { createClient } from '@/lib/supabase/client';
 type PageState = 'upload' | 'generate' | 'practice';
 
 export default function GeneratePage() {
+  const router = useRouter();
   const [pageState, setPageState] = useState<PageState>('upload');
   const [extractedText, setExtractedText] = useState('');
   const [fileName, setFileName] = useState('');
@@ -22,6 +24,8 @@ export default function GeneratePage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [quizMode, setQuizMode] = useState<QuizMode>('practice');
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [generationMode, setGenerationMode] = useState<'pdf' | 'topic'>('pdf');
+  const [completedSessionId, setCompletedSessionId] = useState<string | null>(null);
 
   const handleTextExtracted = useCallback((text: string, name: string) => {
     setExtractedText(text);
@@ -29,14 +33,31 @@ export default function GeneratePage() {
     setPageState('generate');
   }, []);
 
-  const handleGenerate = useCallback(async (options: GenerationOptions, title: string, subject: string, chapter: string) => {
+  const handleGenerate = useCallback(async (
+    options: GenerationOptions,
+    title: string,
+    subject: string,
+    chapter: string,
+    mode: 'pdf' | 'topic',
+    classLevel: string,
+    topic: string
+  ) => {
     setGenerating(true);
     setError('');
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: extractedText, options, title, subject, chapter }),
+        body: JSON.stringify({
+          mode,
+          text: mode === 'pdf' ? extractedText : undefined,
+          topic: mode === 'topic' ? topic : undefined,
+          classLevel: mode === 'topic' ? classLevel : undefined,
+          options,
+          title,
+          subject,
+          chapter: mode === 'pdf' ? chapter : undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Generation failed');
@@ -80,8 +101,32 @@ export default function GeneratePage() {
         time_taken_secs: r.timeTakenSecs,
       }));
       await supabase.from('session_answers').insert(answers);
+      setCompletedSessionId(session.id);
     }
   }, [quizSet, quizMode]);
+
+  const handleGenerateTargeted = useCallback(async () => {
+    if (!completedSessionId || !quizSet) return;
+    try {
+      const res = await fetch('/api/practice/targeted', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: completedSessionId,
+          quizSetId: quizSet.id
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to generate targeted practice');
+      
+      if (data.quizSetId) {
+        router.push(`/practice/${data.quizSetId}`);
+      }
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Something went wrong');
+      throw err;
+    }
+  }, [completedSessionId, quizSet, router]);
 
   const exportPDF = async () => {
     if (!questions.length) return;
@@ -171,32 +216,35 @@ export default function GeneratePage() {
             mode={quizMode}
             timeLimitMinutes={30}
             onComplete={handleSessionComplete}
+            onGenerateTargeted={completedSessionId ? handleGenerateTargeted : undefined}
           />
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
           {/* Left: Upload + Preview */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div className="card">
-              <h3 style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
-                {pageState === 'upload' ? 'Upload Material' : `📄 ${fileName}`}
-              </h3>
-              {pageState === 'upload' ? (
-                <UploadZone onTextExtracted={handleTextExtracted} />
-              ) : (
-                <div>
-                  <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem', maxHeight: 320, overflowY: 'auto', fontSize: '0.82rem', lineHeight: 1.7, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                    {extractedText.slice(0, 3000)}{extractedText.length > 3000 ? '\n\n[…truncated for preview]' : ''}
+            {generationMode === 'pdf' && (
+              <div className="card">
+                <h3 style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
+                  {pageState === 'upload' ? 'Upload Material' : `📄 ${fileName}`}
+                </h3>
+                {pageState === 'upload' ? (
+                  <UploadZone onTextExtracted={handleTextExtracted} />
+                ) : (
+                  <div>
+                    <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '1rem', maxHeight: 320, overflowY: 'auto', fontSize: '0.82rem', lineHeight: 1.7, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                      {extractedText.slice(0, 3000)}{extractedText.length > 3000 ? '\n\n[…truncated for preview]' : ''}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.75rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{extractedText.split(/\s+/).length.toLocaleString()} words extracted</span>
+                      <button className="btn btn-ghost btn-sm" onClick={() => { setPageState('upload'); setExtractedText(''); setQuestions([]); setQuizSet(null); }}>
+                        Replace file
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.75rem' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{extractedText.split(/\s+/).length.toLocaleString()} words extracted</span>
-                    <button className="btn btn-ghost btn-sm" onClick={() => { setPageState('upload'); setExtractedText(''); setQuestions([]); setQuizSet(null); }}>
-                      Replace file
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* Questions output */}
             {questions.length > 0 && (
@@ -218,7 +266,9 @@ export default function GeneratePage() {
             <GeneratorControls
               onGenerate={handleGenerate}
               loading={generating}
-              disabled={!extractedText}
+              pdfUploaded={!!extractedText}
+              mode={generationMode}
+              onModeChange={setGenerationMode}
             />
           </div>
         </div>

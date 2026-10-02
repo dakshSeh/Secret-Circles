@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronUp, RotateCcw, ArrowUpCircle, ArrowDownCircle, Shuffle, BookOpen, CheckCircle, XCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, RotateCcw, BookOpen, CheckCircle, XCircle } from 'lucide-react';
 import type { Question, MCQOption } from '@/lib/types';
 
 interface Props {

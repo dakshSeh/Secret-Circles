@@ -1,13 +1,23 @@
 'use client';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, SlidersHorizontal } from 'lucide-react';
+import { Zap, SlidersHorizontal, FileText, Lightbulb } from 'lucide-react';
 import type { GenerationOptions, QuestionType, Difficulty } from '@/lib/types';
 
 interface Props {
-  onGenerate: (options: GenerationOptions, title: string, subject: string, chapter: string) => void;
+  onGenerate: (
+    options: GenerationOptions,
+    title: string,
+    subject: string,
+    chapter: string,
+    mode: 'pdf' | 'topic',
+    classLevel: string,
+    topic: string
+  ) => void;
   loading: boolean;
-  disabled: boolean;
+  pdfUploaded: boolean;
+  mode: 'pdf' | 'topic';
+  onModeChange: (mode: 'pdf' | 'topic') => void;
 }
 
 const QUESTION_TYPES: { key: QuestionType; label: string }[] = [
@@ -22,11 +32,14 @@ const QUESTION_TYPES: { key: QuestionType; label: string }[] = [
 ];
 
 const SUBJECTS = ['Physics', 'Chemistry', 'Biology', 'Mathematics', 'Economics', 'History', 'Geography', 'Political Science', 'English', 'Business Studies', 'Other'];
+const CLASSES = ['Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12', 'Above / Advanced'];
 
-export default function GeneratorControls({ onGenerate, loading, disabled }: Props) {
+export default function GeneratorControls({ onGenerate, loading, pdfUploaded, mode, onModeChange }: Props) {
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('');
   const [chapter, setChapter] = useState('');
+  const [topic, setTopic] = useState('');
+  const [classLevel, setClassLevel] = useState('');
   const [difficulty, setDifficulty] = useState<Difficulty | 'mixed'>('mixed');
   const [count, setCount] = useState(20);
   const [selectedTypes, setSelectedTypes] = useState<QuestionType[]>(['mcq', 'short_2mark', 'hots']);
@@ -48,11 +61,18 @@ export default function GeneratorControls({ onGenerate, loading, disabled }: Pro
   const handleGenerate = () => {
     onGenerate(
       { difficulty, questionCount: count, typeMix: buildTypeMix() },
-      title || 'Generated Quiz',
+      title || (mode === 'pdf' ? 'PDF Generated Quiz' : `${subject} ${classLevel} - ${topic}`),
       subject,
       chapter,
+      mode,
+      classLevel,
+      topic
     );
   };
+
+  const isGenerateDisabled = mode === 'pdf'
+    ? !pdfUploaded
+    : (!subject || !classLevel || !topic.trim());
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -62,6 +82,48 @@ export default function GeneratorControls({ onGenerate, loading, disabled }: Pro
         <h3 style={{ fontSize: '1rem' }}>Generation Controls</h3>
       </div>
 
+      {/* Mode Selector */}
+      <div>
+        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Generation Method
+        </label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.5rem' }}>
+          <button
+            onClick={() => onModeChange('pdf')}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem',
+              padding: '1rem', borderRadius: 'var(--radius-lg)',
+              border: `2px solid ${mode === 'pdf' ? 'var(--ember)' : 'var(--border)'}`,
+              background: mode === 'pdf' ? 'var(--ember-subtle)' : 'var(--surface-2)',
+              cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left'
+            }}
+          >
+            <FileText size={20} color={mode === 'pdf' ? 'var(--ember)' : 'var(--text-muted)'} />
+            <div>
+              <div style={{ fontWeight: 600, color: mode === 'pdf' ? 'var(--ember)' : 'var(--text)', fontSize: '0.9rem', marginBottom: '0.2rem' }}>From PDF</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Extract from your study material</div>
+            </div>
+          </button>
+          
+          <button
+            onClick={() => onModeChange('topic')}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem',
+              padding: '1rem', borderRadius: 'var(--radius-lg)',
+              border: `2px solid ${mode === 'topic' ? 'var(--ember)' : 'var(--border)'}`,
+              background: mode === 'topic' ? 'var(--ember-subtle)' : 'var(--surface-2)',
+              cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left'
+            }}
+          >
+            <Lightbulb size={20} color={mode === 'topic' ? 'var(--ember)' : 'var(--text-muted)'} />
+            <div>
+              <div style={{ fontWeight: 600, color: mode === 'topic' ? 'var(--ember)' : 'var(--text)', fontSize: '0.9rem', marginBottom: '0.2rem' }}>From Topic</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Generate from curriculum</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
       {/* Title */}
       <div>
         <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -69,31 +131,56 @@ export default function GeneratorControls({ onGenerate, loading, disabled }: Pro
         </label>
         <input
           className="input"
-          placeholder="e.g. Physics Chapter 4 Practice"
+          placeholder={mode === 'pdf' ? "e.g. Physics Chapter 4 Practice" : "e.g. Chemical Bonding Test (Optional)"}
           value={title}
           onChange={e => setTitle(e.target.value)}
         />
       </div>
 
-      {/* Subject + Chapter */}
+      {/* Subject + Chapter/Class */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
         <div>
           <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Subject</label>
           <select value={subject} onChange={e => setSubject(e.target.value)} style={{ width: '100%' }}>
-            <option value="">Auto-detect</option>
+            <option value="">{mode === 'pdf' ? 'Auto-detect' : 'Select Subject'}</option>
             {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
+        {mode === 'pdf' ? (
+          <div>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Chapter</label>
+            <input
+              className="input"
+              placeholder="e.g. Thermodynamics"
+              value={chapter}
+              onChange={e => setChapter(e.target.value)}
+            />
+          </div>
+        ) : (
+          <div>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Class Level</label>
+            <select value={classLevel} onChange={e => setClassLevel(e.target.value)} style={{ width: '100%' }}>
+              <option value="">Select Class</option>
+              {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* Topic input (Topic mode only) */}
+      {mode === 'topic' && (
         <div>
-          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Chapter</label>
+          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Topic / Syllabus Concept
+          </label>
           <input
             className="input"
-            placeholder="e.g. Thermodynamics"
-            value={chapter}
-            onChange={e => setChapter(e.target.value)}
+            placeholder="e.g. Laws of Motion or Chemical Kinetics"
+            value={topic}
+            onChange={e => setTopic(e.target.value)}
           />
         </div>
-      </div>
+      )}
 
       {/* Difficulty */}
       <div>
@@ -177,13 +264,13 @@ export default function GeneratorControls({ onGenerate, loading, disabled }: Pro
         className="btn btn-primary"
         style={{
           width: '100%', justifyContent: 'center',
-          opacity: (disabled || loading || selectedTypes.length === 0) ? 0.5 : 1,
-          cursor: (disabled || loading || selectedTypes.length === 0) ? 'not-allowed' : 'pointer',
+          opacity: (isGenerateDisabled || loading || selectedTypes.length === 0) ? 0.5 : 1,
+          cursor: (isGenerateDisabled || loading || selectedTypes.length === 0) ? 'not-allowed' : 'pointer',
         }}
-        disabled={disabled || loading || selectedTypes.length === 0}
+        disabled={isGenerateDisabled || loading || selectedTypes.length === 0}
         onClick={handleGenerate}
-        whileHover={!disabled && !loading ? { scale: 1.01 } : {}}
-        whileTap={!disabled && !loading ? { scale: 0.98 } : {}}
+        whileHover={!isGenerateDisabled && !loading ? { scale: 1.01 } : {}}
+        whileTap={!isGenerateDisabled && !loading ? { scale: 0.98 } : {}}
       >
         {loading ? (
           <>
@@ -197,7 +284,7 @@ export default function GeneratorControls({ onGenerate, loading, disabled }: Pro
         )}
       </motion.button>
 
-      {disabled && (
+      {mode === 'pdf' && !pdfUploaded && (
         <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '-0.5rem' }}>
           Upload a PDF first to enable generation.
         </p>

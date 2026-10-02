@@ -1,43 +1,76 @@
 'use client';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, ChevronDown, ChevronRight, Upload, Cpu, BarChart2, BookOpen, Zap, Shield, ArrowRight } from 'lucide-react';
+import ThemeToggle from '@/components/ui/ThemeToggle';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, animate, useInView } from 'framer-motion';
+import InteractiveDemo from '@/components/landing/InteractiveDemo';
+import MagneticButton from '@/components/ui/MagneticButton';
+import { ChevronDown, Upload, Cpu, BarChart2, BookOpen, Zap, Shield, Menu, X } from 'lucide-react';
+import TheoremLogo from '@/components/ui/TheoremLogo';
+import ScrollVelocity from '@/components/ui/ScrollVelocity';
+import PixelBlast from '@/components/ui/PixelBlast';
+import dynamic from 'next/dynamic';
 
-const SUBJECTS = ['Physics', 'Chemistry', 'Biology', 'Mathematics', 'Economics', 'History', 'Geography', 'Political Science', 'English', 'Business Studies'];
+const DotField = dynamic(() => import('@/components/ui/DotField'), { ssr: false });
+const SideRays = dynamic(() => import('@/components/ui/SideRays'), { ssr: false });
 
 const FEATURES = [
   { icon: Upload, title: 'Smart PDF Upload', desc: 'Drag & drop PDFs. We extract text, identify subject and chapter, and find key concepts automatically.' },
-  { icon: Cpu, title: 'AI Question Engine', desc: 'Generates authentic CBSE-style MCQs, short answers, HOTS, case-based, and assertion-reason questions.' },
+  { icon: Cpu, title: 'AI Question Engine', desc: 'Generates authentic MCQs, short answers, HOTS, case-based, and assertion-reason questions.' },
   { icon: Zap, title: 'Three Quiz Modes', desc: 'Practice with instant feedback, simulate exams with a timer, or let adaptive mode adjust to your level.' },
   { icon: BarChart2, title: 'Deep Analytics', desc: 'Track accuracy, weak concepts, and time per question. Get AI-powered insights on what to revise.' },
-  { icon: BookOpen, title: 'Save & Organise', desc: 'Folder your quiz sets by subject or exam. Rename, duplicate, and export as printable PDF worksheets.' },
-  { icon: Shield, title: 'Curriculum Aligned', desc: 'Every question is generated with CBSE syllabus relevance enforced — no off-syllabus hallucinations.' },
+  { icon: BookOpen, title: 'Study Notes & Flashcards', desc: 'Generate comprehensive notes and spaced-repetition flashcards from any material — instantly.' },
+  { icon: Shield, title: 'Curriculum Aligned', desc: 'Every question is generated with strict syllabus relevance enforced — no hallucinations.' },
 ];
 
 const HOW_IT_WORKS = [
   { step: '01', title: 'Upload Your Material', desc: 'Drop a PDF, notes excerpt, or chapter summary into the forge.' },
   { step: '02', title: 'AI Reads & Understands', desc: 'The platform extracts text, identifies subject, chapter, and key concepts.' },
-  { step: '03', title: 'Questions Generated', desc: 'CBSE-style questions emerge — organised by difficulty and type, ready to practice.' },
-];
-
-const TESTIMONIALS = [
-  { name: 'Ananya S.', role: 'Class XII, DPS Delhi', text: 'I uploaded my Chemistry notes and got 30 board-style questions in 20 seconds. This is what I needed before prelims.' },
-  { name: 'Rohan M.', role: 'Class XI, KV Bangalore', text: 'The HOTS questions it generates are actually hard. Way better than anything I found on Google.' },
-  { name: 'Priya K.', role: 'Physics Teacher, CBSE School', text: 'I use Theorem to build worksheet question banks. Saves me hours every week. The teacher export is excellent.' },
+  { step: '03', title: 'Questions Generated', desc: 'High-quality practice questions emerge — organised by difficulty and type, ready to practice.' },
 ];
 
 const FAQS = [
   { q: 'What file types can I upload?', a: 'Currently PDF files are supported. The system extracts text from standard PDFs — scanned or image-only PDFs will have limited extraction.' },
   { q: 'How many questions can I generate at once?', a: 'You can generate between 5 and 50 questions per session. Use the slider in the generator to set your count.' },
-  { q: 'Are the questions actually CBSE-aligned?', a: 'Yes. The AI is prompted specifically to follow CBSE board wording conventions, difficulty calibration, and question formats. It refuses to introduce off-syllabus concepts.' },
+  { q: 'Are the questions actually curriculum-aligned?', a: 'Yes. The AI is prompted specifically to follow board wording conventions, difficulty calibration, and question formats.' },
   { q: 'Can I export the questions as a PDF?', a: 'Absolutely. After generation, hit Export to download a formatted PDF worksheet with or without an answer key.' },
   { q: 'Is my uploaded content stored securely?', a: 'All uploads are stored in your private Supabase bucket, protected by row-level security. Only you can access your files.' },
 ];
 
+const REVIEWS = [
+  { text: "I cut my weekly revision and quiz-prep time from four hours to forty minutes. The questions look exactly like my actual board papers.", author: "Arjun", role: "Class 12 Science" },
+  { text: "I used Theorem while preparing for JEE. The targeted practice and AI feedback really helped improve my performance. I highly recommend it to anyone preparing for competitive exams.", author: "Deepesh", role: "JEE Adv. AIR 3095", special: true },
+  { text: "I used Theorum to analyze my performance across practice sets, and the ability to adjust question difficulty based on my aptitude made every session focused and genuinely productive.", author: "Yash", role: "NEET AIR 7173", special: true },
+  { text: "The assertion-reason questions generated by Theorem are incredibly accurate. It's the only AI tool I trust for my students.", author: "Dr. Sharma", role: "Professor of Biology" },
+  { text: "I used to dread finding practice questions for my exams. Now I just upload the chapter and I'm ready to study in seconds.", author: "Priya", role: "Class 10 Student" },
+  { text: "The detailed analytics helped me identify exactly which concepts I was weak in. My test scores have improved drastically.", author: "Rahul", role: "University Freshman" },
+  { text: "Finally, an AI tool that actually understands the nuances of syllabus requirements instead of hallucinating random trivia.", author: "Ananya", role: "Class 11 Commerce" },
+  { text: "This is the smartest way I've ever prepared for finals. The flashcards feature is an absolute lifesaver.", author: "Kiran", role: "Class 12 Humanities" }
+];
+
+function AnimatedCounter({ to }: { to: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: '-50px' });
+  
+  useEffect(() => {
+    if (inView && ref.current) {
+      const controls = animate(0, to, {
+        duration: 2.5,
+        ease: 'easeOut',
+        onUpdate: (v) => {
+          if (ref.current) ref.current.textContent = Math.round(v).toLocaleString();
+        }
+      });
+      return () => controls.stop();
+    }
+  }, [inView, to]);
+
+  return <span ref={ref}>0</span>;
+}
+
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -48,120 +81,67 @@ function Navbar() {
   return (
     <nav style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-      background: scrolled ? 'rgba(10,10,10,0.92)' : 'transparent',
-      backdropFilter: scrolled ? 'blur(16px)' : 'none',
-      borderBottom: scrolled ? '1px solid var(--border)' : '1px solid transparent',
-      transition: 'all 0.3s',
+      background: scrolled || menuOpen ? 'var(--surface-glass)' : 'transparent',
+      backdropFilter: scrolled || menuOpen ? 'blur(24px)' : 'none',
+      WebkitBackdropFilter: scrolled || menuOpen ? 'blur(24px)' : 'none',
+      borderBottom: scrolled || menuOpen ? '1px solid var(--border)' : '1px solid transparent',
+      boxShadow: scrolled || menuOpen ? '0 1px 2px rgba(0,0,0,0.05), inset 0 -1px 0 rgba(255,255,255,0.1)' : 'none',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     }}>
-      <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
-        {/* Logo */}
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
-          <div style={{ width: 28, height: 28, background: 'var(--ember)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Flame size={16} color="#fff" />
-          </div>
-          <span style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--text)', letterSpacing: '-0.02em' }}>Theorem</span>
-        </Link>
+      <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px', paddingLeft: 'clamp(1rem, 5vw, 1.5rem)', paddingRight: 'clamp(1rem, 5vw, 1.5rem)' }}>
+        
+        <div className="flex items-center gap-3">
+          {/* Hamburger (Mobile only) */}
+          <button className="md:hidden btn btn-ghost btn-icon" onClick={() => setMenuOpen(!menuOpen)} style={{ padding: '0.25rem', marginLeft: '-0.25rem' }}>
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+          
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
+            <div style={{ width: 28, height: 28, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <TheoremLogo size={16} color="var(--text)" />
+            </div>
+            <span className="hidden sm:block" style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--text)', letterSpacing: '-0.02em' }}>Theorem</span>
+          </Link>
+        </div>
 
-        {/* Desktop nav */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} className="hidden md:flex">
-          <a href="#features" className="btn btn-ghost btn-sm">Features</a>
-          <a href="#how-it-works" className="btn btn-ghost btn-sm">How it works</a>
+        {/* Desktop Links */}
+        <div className="hidden md:flex items-center gap-1">
+          <Link href="#features" className="btn btn-ghost btn-sm">Features</Link>
+          <Link href="#how-it-works" className="btn btn-ghost btn-sm">How it works</Link>
           <Link href="/about" className="btn btn-ghost btn-sm">About</Link>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        {/* Right Actions */}
+        <div className="flex items-center gap-1.5 sm:gap-3">
+          <ThemeToggle />
+          <div style={{ width: '1px', height: '24px', background: 'var(--border)' }} className="hidden md:block" />
           <Link href="/login" className="btn btn-ghost btn-sm">Sign in</Link>
-          <Link href="/signup" className="btn btn-primary btn-sm">
-            Start Forging <ArrowRight size={14} />
-          </Link>
+          <MagneticButton asLink href="/signup" className="btn btn-primary btn-sm" style={{ padding: '0.4rem 0.75rem' }}>
+            <span className="hidden sm:inline">Start for free</span>
+            <span className="sm:hidden">Start</span>
+          </MagneticButton>
         </div>
       </div>
-    </nav>
-  );
-}
 
-function HeroOrb() {
-  return (
-    <div style={{ position: 'relative', width: 440, height: 440, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {/* Outer ring */}
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-        style={{
-          position: 'absolute', width: 420, height: 420, borderRadius: '50%',
-          border: '1px dashed rgba(232,104,26,0.2)',
-        }}
-      />
-      {/* Middle ring */}
-      <motion.div
-        animate={{ rotate: -360 }}
-        transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
-        style={{
-          position: 'absolute', width: 310, height: 310, borderRadius: '50%',
-          border: '1px solid rgba(232,104,26,0.15)',
-        }}
-      >
-        {/* Orbiting dot */}
-        <div style={{
-          position: 'absolute', top: -4, left: '50%', transform: 'translateX(-50%)',
-          width: 8, height: 8, borderRadius: '50%', background: 'var(--ember)',
-          boxShadow: '0 0 12px var(--ember)',
-        }} />
-      </motion.div>
-
-      {/* Core glow */}
-      <motion.div
-        animate={{ scale: [1, 1.1, 1], opacity: [0.6, 1, 0.6] }}
-        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-        style={{
-          position: 'absolute', width: 180, height: 180, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(232,104,26,0.35) 0%, rgba(232,104,26,0.05) 70%)',
-        }}
-      />
-
-      {/* Center icon */}
-      <div style={{
-        position: 'relative', zIndex: 2,
-        width: 80, height: 80, borderRadius: '50%',
-        background: 'var(--surface)',
-        border: '2px solid var(--ember-border)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: 'var(--glow-ember)',
-      }}>
-        <Flame size={36} color="var(--ember)" />
-      </div>
-
-      {/* Floating question cards */}
-      {([
-        { top: '5%',   left: '-10%',  right: undefined, bottom: undefined, label: 'MCQ',        delay: 0 },
-        { top: '20%',  right: '-15%', left: undefined,  bottom: undefined, label: 'HOTS',       delay: 0.5 },
-        { bottom: '15%', left: '-8%', right: undefined, top: undefined,    label: '5 Mark',     delay: 1 },
-        { bottom: '5%',  right: '-12%', left: undefined, top: undefined,   label: 'Case Study', delay: 1.5 },
-      ] as Array<{ top?: string; bottom?: string; left?: string; right?: string; label: string; delay: number }>)
-        .map((item, i) => (
+      {/* Mobile Menu Dropdown */}
+      <AnimatePresence>
+        {menuOpen && (
           <motion.div
-            key={i}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1, y: [0, -8, 0] }}
-            transition={{ delay: item.delay, duration: 3, repeat: Infinity, repeatType: 'reverse', ease: 'easeInOut' }}
-            style={{
-              position: 'absolute',
-              ...(item.top    ? { top:    item.top    } : {}),
-              ...(item.bottom ? { bottom: item.bottom } : {}),
-              ...(item.left   ? { left:   item.left   } : {}),
-              ...(item.right  ? { right:  item.right  } : {}),
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 8, padding: '0.4rem 0.75rem',
-              fontSize: '0.75rem', fontWeight: 600, color: 'var(--ember)',
-              whiteSpace: 'nowrap',
-              boxShadow: 'var(--shadow)',
-            }}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="md:hidden"
+            style={{ overflow: 'hidden', background: 'var(--surface)' }}
           >
-            {item.label}
+            <div style={{ padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', borderBottom: '1px solid var(--border)' }}>
+              <Link href="#features" onClick={() => setMenuOpen(false)} className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}>Features</Link>
+              <Link href="#how-it-works" onClick={() => setMenuOpen(false)} className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}>How it works</Link>
+              <Link href="/about" onClick={() => setMenuOpen(false)} className="btn btn-ghost" style={{ justifyContent: 'flex-start' }}>About</Link>
+            </div>
           </motion.div>
-        ))}
-    </div>
+        )}
+      </AnimatePresence>
+    </nav>
   );
 }
 
@@ -190,200 +170,244 @@ function AccordionItem({ q, a }: { q: string; a: string }) {
   );
 }
 
+function HeroDotField() {
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    const update = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setIsDarkMode(isDark);
+    };
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
+  const gradientFrom = isDarkMode ? 'rgba(124, 157, 150, 0.6)' : 'rgba(70, 95, 90, 0.95)'; // darker for light mode
+  const gradientTo = isDarkMode ? 'rgba(98, 128, 122, 0.4)' : 'rgba(50, 75, 70, 0.85)'; // darker for light mode
+  const glowColor = isDarkMode ? 'rgba(124, 157, 150, 0.15)' : 'rgba(124, 157, 150, 0.12)';
+  const dotRadius = isDarkMode ? 1.5 : 2.2;
+
+  return (
+    <DotField
+      dotRadius={dotRadius}
+      dotSpacing={14}
+      cursorRadius={500}
+      cursorForce={0.1}
+      bulgeOnly={true}
+      bulgeStrength={67}
+      glowRadius={200}
+      sparkle={true}
+      waveAmplitude={0}
+      gradientFrom={gradientFrom}
+      gradientTo={gradientTo}
+      glowColor={glowColor}
+    />
+  );
+}
+
+function HeroSideRays() {
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    const update = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setIsDarkMode(isDark);
+    };
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
+  const rayColor1 = isDarkMode ? '#7C9D96' : '#62807A'; // --ember / --ember-dim
+  const rayColor2 = isDarkMode ? '#94B8B0' : '#7C9D96'; // --ember-glow / --ember
+  const intensity = isDarkMode ? 1.5 : 2.0;
+
+  return (
+    <SideRays
+      speed={2.5}
+      rayColor1={rayColor1}
+      rayColor2={rayColor2}
+      intensity={intensity}
+      spread={2}
+      origin="top-right"
+      tilt={0}
+      saturation={1.5}
+      blend={0.75}
+      falloff={1.6}
+      opacity={0.6}
+    />
+  );
+}
+
 export default function LandingPage() {
+
   return (
     <>
       <Navbar />
 
       {/* ── HERO ── */}
       <section style={{
-        minHeight: '100vh', display: 'flex', alignItems: 'center',
+        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
         position: 'relative', overflow: 'hidden',
-        paddingTop: '80px',
-      }} className="grid-bg">
-        {/* Background glows */}
-        <div className="hero-glow" style={{ top: '-10%', left: '-5%' }} />
-        <div className="hero-glow" style={{ bottom: '-20%', right: '-10%', opacity: 0.5 }} />
+      }}>
+        {/* SideRays Background (Behind DotField) */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+          <HeroSideRays />
+        </div>
+        
+        {/* DotField Background */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
+          <HeroDotField />
+        </div>
 
-        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '3rem', flexWrap: 'wrap', zIndex: 1 }}>
-          {/* Text */}
+        {/* Hero Content */}
+        <div style={{ position: 'relative', zIndex: 10, width: '100%' }} className="container mx-auto px-6 pt-32 pb-24 text-center flex flex-col items-center">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            style={{ maxWidth: 560, flex: '1 1 300px' }}
+            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2.5rem' }}
           >
-            <div className="badge badge-ember" style={{ marginBottom: '1.5rem' }}>
-              <Flame size={10} /> CBSE Assessment Platform
-            </div>
-
-            <h1 style={{ marginBottom: '1.25rem' }}>
-              Turn Any Chapter Into{' '}
-              <span style={{
-                backgroundImage: 'linear-gradient(135deg, var(--ember) 0%, var(--ember-glow) 100%)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              }}>
-                Exam-Ready Practice
-              </span>
+            <h1 className="hero-title" style={{ lineHeight: 1.1 }}>
+              The answer isn&apos;t the <br className="hidden md:block" />
+              <span style={{ color: 'var(--ember)' }}>interesting</span> part
             </h1>
 
-            <p style={{ fontSize: '1.1rem', marginBottom: '2.5rem', maxWidth: 480, color: 'var(--text-muted)', lineHeight: 1.8 }}>
-              Upload your notes and let AI forge personalised CBSE-style assessments in seconds.
-              Cold PDFs enter. Sharper minds leave.
-            </p>
-
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <Link href="/signup" className="btn btn-primary btn-lg">
-                Start Forging <ArrowRight size={16} />
-              </Link>
-            </div>
-
-            {/* Stats */}
-            <div style={{ display: 'flex', gap: '2.5rem', marginTop: '2.5rem' }}>
-              {[
-                { value: '9+', label: 'CBSE Subjects' },
-                { value: '50', label: 'Questions/set' },
-                { value: '8', label: 'Question Types' },
-              ].map((stat) => (
-                <div key={stat.label}>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--ember)', lineHeight: 1 }}>{stat.value}</div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Orb */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            style={{ flex: '1 1 300px', display: 'flex', justifyContent: 'center' }}
-          >
-            <HeroOrb />
+            <MagneticButton asLink href="/signup" className="btn btn-primary btn-lg" style={{ fontSize: '1.1rem', padding: '1rem 2.5rem' }}>
+              Start for free
+            </MagneticButton>
           </motion.div>
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
-      <section id="how-it-works" className="section">
-        <div className="container">
-          <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-            <div className="badge badge-ember" style={{ marginBottom: '1rem' }}>Process</div>
-            <h2>Three steps to mastery</h2>
-            <p style={{ marginTop: '0.75rem', maxWidth: 480, margin: '0.75rem auto 0' }}>
-              From raw material to refined practice — in seconds.
+      <section className="section" style={{ background: 'var(--bg)' }}>
+        <InteractiveDemo />
+      </section>
+
+      {/* ── ARCHITECTURE OF TRUST (Slanted) ── */}
+      <div style={{ position: 'relative', overflow: 'hidden', padding: '12rem 0', margin: '-12rem 0', zIndex: 10 }}>
+        <section style={{ 
+          padding: '8rem 0', 
+          background: 'var(--surface-2)', 
+          borderTop: '1px solid var(--border)', 
+          borderBottom: '1px solid var(--border)', 
+          transform: 'skewY(8deg)',
+          transformOrigin: 'center'
+        }}>
+          {/* Un-skew the inner content so text stays crisp and readable */}
+          <div style={{ transform: 'skewY(-8deg)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '3rem' }}>
+            
+            {/* Looping Marquee (Rotated to perfectly match the background slant) */}
+            <div style={{ width: '100%', position: 'relative', padding: '2rem 0', display: 'flex', justifyContent: 'center' }}>
+              <div style={{ transform: 'rotate(8deg)', transformOrigin: 'center', width: '150vw' }}>
+                <div style={{ display: 'flex', gap: '1.5rem', width: 'max-content', padding: '0 1rem' }} className="animate-scroll">
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  {[...REVIEWS, ...REVIEWS, ...REVIEWS, ...REVIEWS].map((r: any, i) => (
+                    <div key={i} className="card" style={{ width: 'min(380px, 85vw)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '1.25rem', whiteSpace: 'normal', textAlign: 'left', background: 'var(--surface)', ...(r.special ? { border: '1px solid var(--ember-border)', boxShadow: 'var(--glow-ember)', position: 'relative', zIndex: 1 } : {}) }}>
+                      <p style={{ fontFamily: 'var(--font-serif)', fontSize: '1.1rem', color: 'var(--text)', lineHeight: 1.5 }}>&quot;{r.text}&quot;</p>
+                      <div style={{ marginTop: 'auto' }}>
+                        <div style={{ fontWeight: 600, color: 'var(--text)' }}>{r.author}</div>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{r.role}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Trust badge */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ width: 40, height: 1, background: 'var(--border-2)' }} />
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-dim)', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 600 }}>
+                Trusted by <AnimatedCounter to={11200} />+ students and educators
+              </p>
+            </div>
+            
+          </div>
+        </section>
+      </div>
+
+      {/* ── FEATURES + SCROLL VELOCITY (unified diagonal-bg) ── */}
+      <div className="diagonal-bg" style={{ marginTop: '-8rem', paddingTop: '12rem' }}>
+        <section id="features" className="section">
+          <div className="container">
+            <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+              <div className="badge badge-ember" style={{ marginBottom: '1rem' }}>Features</div>
+              <h2>Everything you need to practice smarter</h2>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '1.25rem' }}>
+              {FEATURES.map((f, i) => (
+                <motion.div
+                  key={f.title}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="card card-ember"
+                >
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 8,
+                    background: 'var(--ember-subtle)',
+                    border: '1px solid var(--ember-border)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    marginBottom: '1rem',
+                  }}>
+                    <f.icon size={20} color="var(--ember)" />
+                  </div>
+                  <h3 style={{ marginBottom: '0.5rem' }}>{f.title}</h3>
+                  <p style={{ fontSize: '0.875rem', lineHeight: 1.6 }}>{f.desc}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── SCROLL VELOCITY MARQUEE ── */}
+        <div style={{ padding: '3rem 0', overflow: 'hidden' }}>
+          <ScrollVelocity
+            texts={['Upload · Practice · Master ·', 'AI-Powered · Syllabus-Aligned · Instant ·']}
+            velocity={80}
+            className="scroll-velocity-text"
+          />
+        </div>
+      </div>
+
+      {/* ── HOW IT WORKS (Spacious Layout) ── */}
+      <section id="how-it-works" className="section" style={{ background: 'var(--surface-2)' }}>
+        <div className="container" style={{ maxWidth: 800 }}>
+          <div style={{ marginBottom: '6rem' }}>
+            <h2 style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)', marginBottom: '1.5rem', letterSpacing: '-0.03em' }}>The simplest path to practice.</h2>
+            <p className="editorial-text">
+              No complicated prompt engineering. No fighting with generic AI to match your syllabus. Just your material, transformed into mastery.
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
-            {HOW_IT_WORKS.map((step, i) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4rem' }}>
+            {HOW_IT_WORKS.map((step) => (
               <motion.div
                 key={step.step}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.15 }}
-                className="card card-ember"
-                style={{ position: 'relative', overflow: 'hidden' }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}
               >
                 <div style={{
-                  fontSize: '4rem', fontWeight: 900,
-                  color: 'var(--border)',
-                  position: 'absolute', top: '0.5rem', right: '1rem',
-                  lineHeight: 1, pointerEvents: 'none',
-                  fontFamily: 'var(--font-mono)',
+                  fontSize: '3rem', fontWeight: 700,
+                  color: 'var(--border-2)',
+                  fontFamily: 'var(--font-serif)',
+                  lineHeight: 1,
+                  marginTop: '-0.25rem'
                 }}>
                   {step.step}
                 </div>
-                <div style={{
-                  width: 40, height: 40, borderRadius: '50%',
-                  background: 'var(--ember-subtle)',
-                  border: '1px solid var(--ember-border)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  marginBottom: '1rem',
-                }}>
-                  <ChevronRight size={18} color="var(--ember)" />
-                </div>
-                <h3 style={{ marginBottom: '0.5rem' }}>{step.title}</h3>
-                <p style={{ fontSize: '0.9rem' }}>{step.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── FEATURES ── */}
-      <section id="features" className="section" style={{ background: 'var(--surface)' }}>
-        <div className="container">
-          <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-            <div className="badge badge-ember" style={{ marginBottom: '1rem' }}>Features</div>
-            <h2>Everything you need to practice smarter</h2>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
-            {FEATURES.map((f, i) => (
-              <motion.div
-                key={f.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="card card-ember"
-              >
-                <div style={{
-                  width: 44, height: 44, borderRadius: 8,
-                  background: 'var(--ember-subtle)',
-                  border: '1px solid var(--ember-border)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  marginBottom: '1rem',
-                }}>
-                  <f.icon size={20} color="var(--ember)" />
-                </div>
-                <h3 style={{ marginBottom: '0.5rem' }}>{f.title}</h3>
-                <p style={{ fontSize: '0.875rem', lineHeight: 1.6 }}>{f.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── SUBJECTS ── */}
-      <section className="section">
-        <div className="container" style={{ textAlign: 'center' }}>
-          <div className="badge badge-ember" style={{ marginBottom: '1rem' }}>Subjects</div>
-          <h2 style={{ marginBottom: '0.75rem' }}>Covers the full CBSE curriculum</h2>
-          <p style={{ marginBottom: '2.5rem' }}>From Sciences to Humanities — all board subjects supported.</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
-            {SUBJECTS.map((s) => (
-              <span key={s} className="tag" style={{ fontSize: '0.875rem', padding: '0.4rem 1rem' }}>{s}</span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── TESTIMONIALS ── */}
-      <section className="section" style={{ background: 'var(--surface)' }}>
-        <div className="container">
-          <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-            <div className="badge badge-ember" style={{ marginBottom: '1rem' }}>Testimonials</div>
-            <h2>Students & teachers who forged ahead</h2>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
-            {TESTIMONIALS.map((t, i) => (
-              <motion.div
-                key={t.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.15 }}
-                className="card"
-              >
-                <div style={{ fontSize: '1.5rem', color: 'var(--ember)', marginBottom: '0.75rem', lineHeight: 1 }}>&ldquo;</div>
-                <p style={{ fontSize: '0.9rem', lineHeight: 1.7, color: 'var(--text)', marginBottom: '1.25rem' }}>{t.text}</p>
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{t.name}</div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t.role}</div>
+                <div>
+                  <h3 style={{ fontSize: '1.75rem', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>{step.title}</h3>
+                  <p className="editorial-text" style={{ fontSize: '1.1rem' }}>{step.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -406,24 +430,41 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA BANNER ── */}
-      <section style={{ padding: '5rem 0', background: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
-        <div className="container" style={{ textAlign: 'center' }}>
+      {/* ── CTA BANNER (Experience the Forge) ── */}
+      <section className="section" style={{ position: 'relative', overflow: 'hidden', background: 'var(--surface-2)', borderTop: '1px solid var(--border)' }}>
+        {/* PixelBlast Background */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0, opacity: 0.4 }}>
+          <PixelBlast
+            variant="circle"
+            pixelSize={6}
+            color="#678D85"
+            patternScale={3}
+            patternDensity={1.2}
+            pixelSizeJitter={0.5}
+            enableRipples={false}
+            liquid={false}
+            speed={0.6}
+            edgeFade={0.25}
+            transparent
+          />
+        </div>
+
+        <div className="container" style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: 600 }}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           >
-            <Flame size={40} color="var(--ember)" style={{ marginBottom: '1rem' }} />
-            <h2 style={{ marginBottom: '1rem' }}>
-              Ready to forge your mastery?
+            <h2 style={{ fontSize: 'clamp(3rem, 6vw, 4.5rem)', marginBottom: '1.5rem', letterSpacing: '-0.04em', lineHeight: 1 }}>
+              Stop reading. <br/> Start practicing.
             </h2>
-            <p style={{ marginBottom: '2rem', maxWidth: 440, margin: '0 auto 2rem' }}>
-              Join students and teachers who are already generating smarter practice with Theorem.
+            <p className="editorial-text" style={{ margin: '0 auto 3rem', maxWidth: 480 }}>
+              The best way to understand Theorem is to see it generate your first assessment.
             </p>
-            <Link href="/signup" className="btn btn-primary btn-lg">
-              Start Forging — It&apos;s Free <ArrowRight size={16} />
-            </Link>
+            <MagneticButton asLink href="/signup" className="btn btn-primary btn-lg" style={{ fontSize: '1.1rem', padding: '1rem 3rem' }}>
+              Start for free
+            </MagneticButton>
           </motion.div>
         </div>
       </section>
@@ -431,22 +472,47 @@ export default function LandingPage() {
       {/* ── FOOTER ── */}
       <footer style={{
         borderTop: '1px solid var(--border)',
-        padding: '2rem 0',
+        padding: '3rem 0 2rem',
         background: 'var(--bg)',
+        overflow: 'hidden',
       }}>
-        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: 22, height: 22, background: 'var(--ember)', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Flame size={12} color="#fff" />
+        <div className="container">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ width: 22, height: 22, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <TheoremLogo size={12} color="var(--text)" />
+              </div>
+              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-muted)' }}>Theorem</span>
             </div>
-            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-muted)' }}>Theorem</span>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+              Where learning is forged through practice.
+            </p>
+            <div style={{ display: 'flex', gap: '1.5rem' }}>
+              <Link href="/feedback" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textDecoration: 'none' }} onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>Leave Feedback</Link>
+              <Link href="/about" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textDecoration: 'none' }} onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>About</Link>
+              <Link href="/login" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textDecoration: 'none' }} onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>Sign in</Link>
+            </div>
           </div>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-            Where learning is forged through practice.
-          </p>
-          <div style={{ display: 'flex', gap: '1.5rem' }}>
-            <Link href="/about" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>About</Link>
-            <Link href="/login" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Sign in</Link>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem', lineHeight: 0.85 }}>
+            <span style={{
+              fontFamily: 'var(--font-serif)',
+              fontSize: 'clamp(3.5rem, 13vw, 9rem)',
+              fontWeight: 700,
+              fontStyle: 'italic',
+              letterSpacing: '-0.02em',
+              background: 'linear-gradient(180deg, var(--text) 20%, var(--border-2) 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              opacity: 0.35,
+              userSelect: 'none',
+              transition: 'opacity 0.3s ease',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '0.35')}
+            >
+              THEOREM
+            </span>
           </div>
         </div>
       </footer>
